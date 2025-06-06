@@ -30,6 +30,9 @@ class MdocPresentmentMechanism(
 ): PresentmentMechanism {
 
     override fun close() {
-        CoroutineScope(Dispatchers.IO).launch() { transport.close() }
+        CoroutineScope(Dispatchers.IO).launch() {
+            println("closing transport $transport")
+            transport.close()
+        }
     }
 }

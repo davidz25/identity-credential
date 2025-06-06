@@ -12,7 +12,7 @@ import org.multipaz.wallet.provisioning.DocumentExtensions.documentConfiguration
 import org.multipaz.wallet.provisioning.DocumentExtensions.walletDocumentMetadata
 import org.multipaz.provisioning.Proofing
 import org.multipaz.provisioning.RegistrationResponse
-import org.multipaz.wallet.provisioning.WalletDocumentMetadata
+import org.multipaz.wallet.provisioning.WalletDocumentMetadataInterface
 import org.multipaz.provisioning.evidence.EvidenceRequest
 import org.multipaz.provisioning.evidence.EvidenceRequestIcaoNfcTunnel
 import org.multipaz.provisioning.evidence.EvidenceRequestOpenid4Vp
@@ -134,7 +134,7 @@ class ProvisioningViewModel : ViewModel() {
 
                 val pendingDocumentConfiguration = issuerConfiguration.pendingDocumentInformation
                 document = documentStore.createDocument { metadata ->
-                    val walletMetadata = metadata as WalletDocumentMetadata
+                    val walletMetadata = metadata as WalletDocumentMetadataInterface
                     walletMetadata.initialize(
                         issuingAuthorityIdentifier = issuerConfiguration.identifier,
                         documentIdentifier = issuerDocumentIdentifier,

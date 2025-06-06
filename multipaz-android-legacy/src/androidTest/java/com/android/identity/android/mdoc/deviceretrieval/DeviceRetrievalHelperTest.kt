@@ -48,7 +48,7 @@ import org.multipaz.crypto.X500Name
 import org.multipaz.crypto.X509Cert
 import org.multipaz.crypto.X509CertChain
 import org.multipaz.crypto.X509KeyUsage
-import org.multipaz.document.SimpleDocumentMetadata
+import org.multipaz.document.DocumentMetadata
 import org.multipaz.mdoc.credential.MdocCredential
 import org.multipaz.mdoc.mso.MobileSecurityObjectGenerator
 import org.multipaz.mdoc.mso.StaticAuthDataGenerator
@@ -109,7 +109,7 @@ class DeviceRetrievalHelperTest {
     private lateinit var documentStore: DocumentStore
 
     @Before
-    fun setUp() {
+    fun setUp() = runBlocking {
         // This is needed to prefer BouncyCastle bundled with the app instead of the Conscrypt
         // based implementation included in Android.
         Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
@@ -118,9 +118,9 @@ class DeviceRetrievalHelperTest {
         initializeApplication(InstrumentationRegistry.getInstrumentation().targetContext)
 
         storage = AndroidStorage(":memory:")
-        secureAreaRepository = SecureAreaRepository.build {
-            add(AndroidKeystoreSecureArea.create(storage))
-        }
+        secureAreaRepository = SecureAreaRepository.Builder()
+            .add(AndroidKeystoreSecureArea.create(storage))
+            .build()
         val credentialLoader = CredentialLoader()
         credentialLoader.addCredentialImplementation(MdocCredential.CREDENTIAL_TYPE) { document ->
             MdocCredential(document)
@@ -129,7 +129,7 @@ class DeviceRetrievalHelperTest {
             storage = storage,
             secureAreaRepository = secureAreaRepository,
             credentialLoader = credentialLoader,
-            documentMetadataFactory = SimpleDocumentMetadata::create
+            documentMetadataFactory = DocumentMetadata::create
         )
     }
 

@@ -1,8 +1,8 @@
 package org.multipaz.wallet.provisioning
 
-import org.multipaz.android.direct_access.DirectAccessDocumentMetadata
+import org.multipaz.android.direct_access.DirectAccessDocumentMetadataInterface
 import org.multipaz.cbor.annotation.CborSerializable
-import org.multipaz.document.DocumentMetadata
+import org.multipaz.document.DocumentMetadataInterface
 import org.multipaz.wallet.provisioning.remote.WalletServerProvider
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -11,15 +11,14 @@ import kotlinx.io.bytestring.isEmpty
 import org.multipaz.provisioning.DocumentConfiguration
 import org.multipaz.provisioning.DocumentState
 import org.multipaz.provisioning.IssuingAuthorityConfiguration
-import kotlin.concurrent.Volatile
 
 /**
- * [DocumentMetadata] implementation for the Wallet app.
+ * [DocumentMetadataInterface] implementation for the Wallet app.
  */
-class WalletDocumentMetadata private constructor(
+class WalletDocumentMetadataInterface private constructor(
     serializedData: ByteString?,
     private val saveFn: suspend (data: ByteString) -> Unit
-) : DocumentMetadata, DirectAccessDocumentMetadata {
+) : DocumentMetadataInterface, DirectAccessDocumentMetadataInterface {
     private val lock = Mutex()
     private val data: Data = if (serializedData == null || serializedData.isEmpty()) {
         Data()
@@ -164,8 +163,8 @@ class WalletDocumentMetadata private constructor(
             documentId: String,
             serializedData: ByteString?,
             saveFn: suspend (data: ByteString) -> Unit
-        ): WalletDocumentMetadata {
-            return WalletDocumentMetadata(serializedData, saveFn)
+        ): WalletDocumentMetadataInterface {
+            return WalletDocumentMetadataInterface(serializedData, saveFn)
         }
     }
 }

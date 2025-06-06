@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.io.bytestring.ByteString
+import org.multipaz.credential.Credential
+import kotlin.collections.contains
 
 /**
  * Class for storing real-world identity documents.
@@ -48,17 +50,16 @@ import kotlinx.io.bytestring.ByteString
  * For more details about documents stored in a [DocumentStore] see the
  * [Document] class.
  *
+ * Use [buildDocumentStore] or [DocumentStore.Builder] to create a [DocumentStore] instance.
+ *
  * @property storage the [Storage] to use for storing/retrieving documents.
- * @property secureAreaRepository the repository of configured [SecureArea] that can
- * be used.
- * @property credentialLoader the [CredentialLoader] to use for retrieving serialized credentials
- * associated with documents.
- * @property documentMetadataFactory function that creates [DocumentMetadata] instances
- * for documents in this [DocumentStore]
- * @property documentTableSpec [StorageTableSpec] that defines the table for [DocumentMetadata]
- * persistent storage, it must not have expiration or partitions enabled.
+ * @property secureAreaRepository the repository of configured [SecureArea] that can be used.
+ * @property credentialLoader the [CredentialLoader] for retrieving serialized credentials associated with  documents.
+ * @property documentMetadataFactory function that creates [DocumentMetadataInterface] instances for documents.
+ * @property documentTableSpec [StorageTableSpec] that defines the table for [DocumentMetadataInterface]
+ *   persistent storage, it must not have expiration or partitions enabled.
  */
-class DocumentStore(
+class DocumentStore private constructor(
     val storage: Storage,
     internal val secureAreaRepository: SecureAreaRepository,
     internal val credentialLoader: CredentialLoader,
@@ -78,13 +79,47 @@ class DocumentStore(
     /**
      * Creates a new document.
      *
+     * The parameters passed will be available in the [Document.metadata] property of the returned
+     * document and can be updated using [DocumentMetadata.setMetadata] and [DocumentMetadata.markAsProvisioned].
+     *
+     * The initial provisioning state of the document will be `false`. This can be updated using
+     * [DocumentMetadata.markAsProvisioned] when configured with one or more certified [Credential] instances.
+     *
+     * @param displayName User-facing name of this specific [Document] instance, e.g. "John's Passport", or `null`.
+     * @param typeDisplayName User-facing name of this document type, e.g. "Utopia Passport", or `null`.
+     * @param cardArt An image that represents this document to the user in the UI. Generally, the aspect
+     *   ratio of 1.586 is expected (based on ID-1 from the ISO/IEC 7810). PNG format is expected
+     *   and transparency is supported.
+     * @param issuerLogo An image that represents the issuer of the document in the UI, e.g. passport office logo.
+     *   PNG format is expected, transparency is supported and square aspect ratio is preferred.
+     * @param other Additional data the application wishes to store.
+     */
+    suspend fun createDocument(
+        displayName: String? = null,
+        typeDisplayName: String? = null,
+        cardArt: ByteString? = null,
+        issuerLogo: ByteString? = null,
+        other: ByteString? = null
+    ): Document {
+        return createDocument(
+            metadataInitializer = {
+                val metadata = it as DocumentMetadata
+                metadata.setMetadata(displayName, typeDisplayName, cardArt, issuerLogo, other)
+            }
+        )
+    }
+
+    /**
+     * Creates a new document using another [DocumentMetadataInterface] than [DocumentMetadata].
+     *
      * If a document with the given identifier already exists, it will be deleted prior to
      * creating the document.
      *
+     * @param metadataInitializer a function to create an instance implementing [DocumentMetadataInterface].
      * @return A newly created document.
      */
     suspend fun createDocument(
-        metadataInitializer: suspend (metadata: DocumentMetadata) -> Unit = {}
+        metadataInitializer: suspend (metadata: DocumentMetadataInterface) -> Unit = {}
     ): Document {
         val table = storage.getTable(documentTableSpec)
         val documentIdentifier = table.insert(key = null, ByteString())
@@ -172,7 +207,82 @@ class DocumentStore(
         return storage.getTable(documentTableSpec)
     }
 
+    class Builder(
+        private val storage: Storage,
+        private val secureAreaRepository: SecureAreaRepository,
+    ) {
+        private val credentialLoader = CredentialLoader().apply {
+            addMdocCredential()
+            addKeylessSdJwtVcCredential()
+            addKeyBoundSdJwtVcCredential()
+        }
+
+        private var documentMetadataFactory: suspend (
+            documentId: String,
+            data: ByteString?,
+            saveFn: suspend (data: ByteString) -> Unit
+        ) -> DocumentMetadataInterface = DocumentMetadata::create
+
+        private var documentTableSpec: StorageTableSpec = Document.defaultTableSpec
+
+        fun setDocumentMetadataFactory(
+            factory: suspend (
+                documentId: String,
+                data: ByteString?,
+                saveFn: suspend (data: ByteString) -> Unit
+            ) -> DocumentMetadataInterface
+        ): Builder {
+            this.documentMetadataFactory = factory
+            return this
+        }
+
+        /**
+         * Add a new [Credential] implementation to document store.
+         *
+         * @param credentialType the credential type
+         * @param createCredentialFunction a function to create a [Credential] of the given type.
+         * @return the builder.
+         */
+        fun addCredentialImplementation(
+            credentialType: String,
+            createCredentialFunction: suspend (Document) -> Credential
+        ): Builder {
+            credentialLoader.addCredentialImplementation(
+                credentialType = credentialType,
+                createCredentialFunction = createCredentialFunction
+            )
+            return this
+        }
+
+        fun setTableSpec(
+            documentTableSpec: StorageTableSpec
+        ): Builder {
+            this.documentTableSpec = documentTableSpec
+            return this
+        }
+
+        fun build(): DocumentStore {
+            return DocumentStore(
+                storage = storage,
+                secureAreaRepository = secureAreaRepository,
+                credentialLoader = credentialLoader,
+                documentMetadataFactory = documentMetadataFactory,
+                documentTableSpec = documentTableSpec
+            )
+        }
+    }
+
     companion object {
         const val TAG = "DocumentStore"
     }
+}
+
+fun buildDocumentStore(
+    storage: Storage,
+    secureAreaRepository: SecureAreaRepository,
+    builderAction: DocumentStore.Builder.() -> Unit
+): DocumentStore {
+    val builder = DocumentStore.Builder(storage, secureAreaRepository)
+    builder.builderAction()
+    return builder.build()
 }

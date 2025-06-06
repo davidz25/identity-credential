@@ -2,14 +2,14 @@ package org.multipaz.android.direct_access
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import org.multipaz.document.DocumentMetadata
+import org.multipaz.document.DocumentMetadataInterface
 
 /**
- * An interface that must be implemented by [DocumentMetadata] implementation of the documents
+ * An interface that must be implemented by [DocumentMetadataInterface] implementation of the documents
  * that can host [DirectAccessCredential]s.
  */
 @RequiresApi(Build.VERSION_CODES.P)
-interface DirectAccessDocumentMetadata: DocumentMetadata {
+interface DirectAccessDocumentMetadataInterface: DocumentMetadataInterface {
     var directAccessDocumentSlot: Int
 
     override suspend fun documentDeleted() {

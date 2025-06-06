@@ -24,7 +24,6 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.android.identity.android.mdoc.util.CredmanUtil
 import org.multipaz.cbor.Cbor
-import org.multipaz.cbor.putCborArray
 import org.multipaz.cbor.Simple
 import org.multipaz.cbor.Tstr
 import org.multipaz.mdoc.credential.MdocCredential
@@ -32,7 +31,7 @@ import org.multipaz.crypto.Algorithm
 import org.multipaz.crypto.Crypto
 import org.multipaz.crypto.EcCurve
 import org.multipaz.crypto.EcPublicKeyDoubleCoordinate
-import org.multipaz.wallet.provisioning.WalletDocumentMetadata
+import org.multipaz.wallet.provisioning.WalletDocumentMetadataInterface
 import org.multipaz.mdoc.request.DeviceRequestParser
 import org.multipaz.mdoc.response.DeviceResponseGenerator
 import org.multipaz.mdoc.util.MdocUtil
@@ -419,7 +418,7 @@ class CredmanPresentationActivity : FragmentActivity() {
         websiteOrigin: String?,
         encodedSessionTranscript: ByteArray,
     ): ByteArray {
-        val documentConfiguration = (mdocCredential.document.metadata as WalletDocumentMetadata).documentConfiguration
+        val documentConfiguration = (mdocCredential.document.metadata as WalletDocumentMetadataInterface).documentConfiguration
         val documentCborBytes = showMdocPresentmentFlow(
             activity = this@CredmanPresentationActivity,
             request = MdocRequest(

@@ -123,7 +123,7 @@ class DirectAccessCredential: Credential {
         this.docType = docType
 
         val metadata = document.metadata
-        check(metadata is DirectAccessDocumentMetadata) {
+        check(metadata is DirectAccessDocumentMetadataInterface) {
             "To use DirectAccessCredential, document's metadata must implement DirectAccessDocumentMetadata"
         }
         val documentSlot = metadata.directAccessDocumentSlot
@@ -204,7 +204,7 @@ class DirectAccessCredential: Credential {
         validUntil: Instant
     ) {
         // update presentation package
-        val metadata = document.metadata as DirectAccessDocumentMetadata
+        val metadata = document.metadata as DirectAccessDocumentMetadataInterface
         encryptedPresentationData = DirectAccess.certifyCredential(
             metadata.directAccessDocumentSlot,
             issuerProvidedAuthenticationData,
@@ -220,7 +220,7 @@ class DirectAccessCredential: Credential {
      * (ie. this credential would be the one used during presentation).
      */
     fun setAsActiveCredential() {
-        val metadata = document.metadata as DirectAccessDocumentMetadata
+        val metadata = document.metadata as DirectAccessDocumentMetadataInterface
         val documentSlot = metadata.directAccessDocumentSlot
         DirectAccess.setActiveCredential(documentSlot, encryptedPresentationData)
     }

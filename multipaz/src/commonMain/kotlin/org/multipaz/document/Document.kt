@@ -37,9 +37,9 @@ import kotlin.concurrent.Volatile
  * Documents in this store are identified by an identifier [Document.identifier] which is
  * automatically assigned and is unique per document in a [DocumentStore].
  *
- * Arbitrary data can be stored in documents using the [DocumentMetadata] returned
- * by [metadata]. Applications that use this library should supply their [DocumentMetadata]
- * factory when creating [DocumentStore].
+ * Arbitrary data can be stored in documents using the [DocumentMetadataInterface] returned
+ * by [metadata]. Applications that use this library should supply their [DocumentMetadataInterface]
+ * factory when creating [DocumentStore]. TODO
  *
  * Each document may have a number of *Credentials*
  * associated with it. These credentials are intended to be used in ways specified by the
@@ -89,7 +89,7 @@ class Document internal constructor(
     private val lock = Mutex()
     private val credentialCache = mutableMapOf<String, Credential>()
     private var allCredentialsLoaded = false
-    lateinit var metadata: DocumentMetadata
+    lateinit var metadata: DocumentMetadataInterface
         internal set
 
     @Volatile
@@ -197,7 +197,6 @@ class Document internal constructor(
     // Called from DocumentStore.deleteDocument
     internal suspend fun deleteDocument() {
         deleted = true
-        metadata.documentDeleted()
         store.emitOnDocumentDeleted(identifier)
         for (credential in getCredentials()) {
             credential.deleteCredential()

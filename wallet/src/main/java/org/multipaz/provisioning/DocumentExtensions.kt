@@ -12,8 +12,8 @@ import org.multipaz.provisioning.IssuingAuthorityConfiguration
 object DocumentExtensions {
     const val TAG = "DocumentExtensions"
 
-    val Document.walletDocumentMetadata: WalletDocumentMetadata
-        get() = metadata as WalletDocumentMetadata
+    val Document.walletDocumentMetadata: WalletDocumentMetadataInterface
+        get() = metadata as WalletDocumentMetadataInterface
 
     /** The identifier for the [IssuingAuthority] the credential belongs to */
     val Document.issuingAuthorityIdentifier: String?
@@ -47,7 +47,7 @@ object DocumentExtensions {
      *
      * This doesn't ping the issuer so the information may be stale. Applications can consult
      * the [DocumentState.timestamp] field to figure out the age of the state and use
-     * [WalletDocumentMetadata.refreshState] to refresh it directly from the issuer server.
+     * [WalletDocumentMetadataInterface.refreshState] to refresh it directly from the issuer server.
      */
     val Document.state: DocumentState?
         get() = walletDocumentMetadata.state

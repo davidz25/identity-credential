@@ -29,10 +29,7 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import io.ktor.client.engine.android.Android
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import org.multipaz.android.direct_access.DirectAccess
+import kotlinx.coroutines.runBlocking
 import org.multipaz.android.direct_access.DirectAccessCredential
 import org.multipaz.context.initializeApplication
 import org.multipaz.securearea.AndroidKeystoreSecureArea
@@ -50,7 +47,7 @@ import org.multipaz.documenttype.knowntypes.PhotoID
 import org.multipaz.documenttype.knowntypes.UtopiaMovieTicket
 import org.multipaz.documenttype.knowntypes.UtopiaNaturalization
 import org.multipaz.provisioning.WalletApplicationCapabilities
-import org.multipaz.wallet.provisioning.WalletDocumentMetadata
+import org.multipaz.wallet.provisioning.WalletDocumentMetadataInterface
 import org.multipaz.wallet.provisioning.remote.WalletServerProvider
 import org.multipaz.mdoc.credential.MdocCredential
 import org.multipaz.mdoc.vical.SignedVical
@@ -71,9 +68,6 @@ import org.multipaz.wallet.logging.EventLogger
 import org.multipaz.wallet.util.toByteArray
 import kotlinx.datetime.Clock
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.multipaz.android.direct_access.DirectAccessDocumentMetadata
-import org.multipaz.wallet.provisioning.DocumentExtensions.documentConfiguration
-import org.multipaz.wallet.provisioning.DocumentExtensions.walletDocumentMetadata
 import java.io.File
 import java.net.URLDecoder
 import java.security.Security
@@ -182,30 +176,32 @@ class WalletApplication : Application() {
         }
 
         // init SecureAreaRepository
-        secureAreaRepository = SecureAreaRepository.build {
-            add(SoftwareSecureArea.create(storage))
-            add(secureAreaProvider.get())
-            addFactory(CloudSecureArea.IDENTIFIER_PREFIX) { identifier ->
-                val queryString = identifier.substring(CloudSecureArea.IDENTIFIER_PREFIX.length + 1)
-                val params = queryString.split("&").map {
-                    val parts = it.split("=", ignoreCase = false, limit = 2)
-                    parts[0] to URLDecoder.decode(parts[1], "UTF-8")
-                }.toMap()
-                val givenUrl = params["url"]!!
-                val cloudSecureAreaUrl =
-                    if (givenUrl.startsWith("/")) {
-                        settingsModel.walletServerUrl.value + givenUrl
-                    } else {
-                        givenUrl
-                    }
-                Logger.i(TAG, "Creating CSA with url $cloudSecureAreaUrl for $identifier")
-                CloudSecureArea.create(
-                    storage,
-                    identifier,
-                    cloudSecureAreaUrl,
-                    Android
-                )
-            }
+        runBlocking {
+            secureAreaRepository = SecureAreaRepository.Builder()
+                .add(SoftwareSecureArea.create(storage))
+                .add(secureAreaProvider.get())
+                .addFactory(CloudSecureArea.IDENTIFIER_PREFIX) { identifier ->
+                    val queryString = identifier.substring(CloudSecureArea.IDENTIFIER_PREFIX.length + 1)
+                    val params = queryString.split("&").map {
+                        val parts = it.split("=", ignoreCase = false, limit = 2)
+                        parts[0] to URLDecoder.decode(parts[1], "UTF-8")
+                    }.toMap()
+                    val givenUrl = params["url"]!!
+                    val cloudSecureAreaUrl =
+                        if (givenUrl.startsWith("/")) {
+                            settingsModel.walletServerUrl.value + givenUrl
+                        } else {
+                            givenUrl
+                        }
+                    Logger.i(TAG, "Creating CSA with url $cloudSecureAreaUrl for $identifier")
+                    CloudSecureArea.create(
+                        storage,
+                        identifier,
+                        cloudSecureAreaUrl,
+                        Android
+                    )
+                }
+                .build()
         }
 
         // init credentialFactory
@@ -228,7 +224,7 @@ class WalletApplication : Application() {
             storage = storage,
             secureAreaRepository = secureAreaRepository,
             credentialLoader = credentialLoader,
-            documentMetadataFactory = WalletDocumentMetadata::create
+            documentMetadataFactory = WalletDocumentMetadataInterface::create
         )
 
         // init Wallet Server
@@ -459,7 +455,7 @@ class WalletApplication : Application() {
             intent,
             PendingIntent.FLAG_IMMUTABLE)
 
-        val metadata = document.metadata as WalletDocumentMetadata
+        val metadata = document.metadata as WalletDocumentMetadataInterface
         val cardArt = metadata.documentConfiguration.cardArt
         val bitmap = BitmapFactory.decodeByteArray(cardArt, 0, cardArt.size)
 

@@ -25,7 +25,7 @@ import org.multipaz.credential.CredentialLoader
 import org.multipaz.credential.SecureAreaBoundCredential
 import org.multipaz.document.Document
 import org.multipaz.document.DocumentStore
-import org.multipaz.document.SimpleDocumentMetadata
+import org.multipaz.document.DocumentMetadata
 import org.multipaz.documenttype.DocumentTypeRepository
 import org.multipaz.securearea.CreateKeySettings
 import org.multipaz.securearea.SecureArea
@@ -52,15 +52,15 @@ class AndroidKeystoreSecureAreaDocumentStoreTest {
     private lateinit var credentialLoader: CredentialLoader
 
     @Before
-    fun setup() {
+    fun setup() = runBlocking {
         initializeApplication(InstrumentationRegistry.getInstrumentation().targetContext)
         storage = AndroidStorage(":memory:")
-        secureAreaRepository = SecureAreaRepository.build {
-            add(AndroidKeystoreSecureArea.create(storage))
-        }
+        secureAreaRepository = SecureAreaRepository.Builder()
+            .add(AndroidKeystoreSecureArea.create(storage))
+            .build()
         credentialLoader = CredentialLoader()
-        credentialLoader.addCredentialImplementation(TestSecureAreaBoundCredential.CREDENTIAL_TYPE) {
-            document -> TestSecureAreaBoundCredential(document)
+        credentialLoader.addCredentialImplementation(TestSecureAreaBoundCredential.CREDENTIAL_TYPE) { document ->
+            TestSecureAreaBoundCredential(document)
         }
     }
 
@@ -70,7 +70,7 @@ class AndroidKeystoreSecureAreaDocumentStoreTest {
             storage = storage,
             secureAreaRepository = secureAreaRepository,
             credentialLoader = credentialLoader,
-            documentMetadataFactory = SimpleDocumentMetadata::create
+            documentMetadataFactory = DocumentMetadata::create
         )
         val document = documentStore.createDocument()
 
